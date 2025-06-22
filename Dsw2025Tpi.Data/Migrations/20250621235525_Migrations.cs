@@ -9,7 +9,7 @@ namespace Dsw2025Tpi.Data.Migrations
     public partial class Migrations : Migration
     {
         /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
+        protected override void Up(MigrationBuilder migrationBuilder) 
         {
             migrationBuilder.CreateTable(
                 name: "Customer",

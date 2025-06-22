@@ -1,6 +1,9 @@
+using Dsw2025Tpi.Application.Services;
 using Dsw2025Tpi.Data;
+using Dsw2025Tpi.Data.Repositories;
 using Dsw2025Tpi.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Dsw2025Tpi.Domain.Interfaces;
 
 namespace Dsw2025Tpi.Api;
 
@@ -32,6 +35,9 @@ public class Program
                 ((Dsw2025Ej15Context)c).Seedwork<Product>("Sources\\products.json");
             });
          */
+
+        builder.Services.AddScoped<IRepository, EfRepository>();
+        builder.Services.AddScoped<ProductsManagementService>();
 
         var app = builder.Build();
 
