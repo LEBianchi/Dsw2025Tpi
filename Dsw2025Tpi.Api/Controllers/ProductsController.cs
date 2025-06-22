@@ -58,4 +58,31 @@ public class ProductsController : ControllerBase
         }
     }
 
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateProduct(Guid id, [FromBody] ProductModel.Request request)
+    {
+        try
+        {
+            var updated = await _service.UpdateProduct(id, request);
+            return Ok(updated);
+        }
+        catch (ArgumentException ae)
+        {
+            return BadRequest(ae.Message);
+        }
+        catch (KeyNotFoundException knf)
+        {
+            return NotFound(knf.Message); 
+        }
+        catch (ApplicationException de)        
+        {
+            return Conflict(de.Message);
+        }
+        catch (Exception)
+        {
+            return Problem("Se produjo un error al actualizar");
+        }
+    }
+
+
 }
