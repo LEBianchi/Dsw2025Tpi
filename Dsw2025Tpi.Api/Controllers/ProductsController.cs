@@ -83,6 +83,23 @@ public class ProductsController : ControllerBase
             return Problem("Se produjo un error al actualizar");
         }
     }
-
+    [HttpPatch("{id}")]
+    public async Task<IActionResult> DisableProduct(Guid id)
+    {
+        try
+        {
+            await _service.DisableProduct(id);
+            
+            return NoContent();
+        }
+        catch (KeyNotFoundException knf)
+        {
+            return NotFound(knf.Message);
+        }
+        catch (Exception)
+        {
+            return Problem("Se produjo un error al inhabilitar el producto");
+        }
+    }
 
 }

@@ -126,7 +126,18 @@ namespace Dsw2025Tpi.Application.Services
             );
         }
 
+        public async Task DisableProduct(Guid id)
+        {
+            
+            var existing = await _repository.GetById<Product>(id);
+            if (existing == null)
+                throw new KeyNotFoundException($"No se encontró producto con Id={id}.");
 
+                        existing.IsActive = false;
+
+            
+            await _repository.Update(existing);
+        }
 
     }
 }
