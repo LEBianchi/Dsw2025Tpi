@@ -18,6 +18,14 @@ public class ProductsController : ControllerBase
         _service = service;
     }
 
+    [HttpGet()]
+    public async Task<IActionResult> GetProducts()
+    {
+        var products = await _service.GetProducts();
+        if (products == null || !products.Any()) return NoContent();
+        return Ok(products);
+    }
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetProductById(Guid id)
     {
@@ -27,18 +35,20 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPost()]
-    public async Task<IActionResult> AddProduct([FromBody]ProductModel.Request request)
+    public async Task<IActionResult> AddProduct([FromBody] ProductModel.Request request)
     {
         try
         {
             var product = await _service.AddProduct(request);
-            return CreatedAtAction(nameof(GetProductById), new { id = product.Id });
+
+            // Retorna 201 Created + la ubicación del nuevo recurso
+            return CreatedAtAction(nameof(GetProductById), new { id = product.Id }, product);
         }
         catch (ArgumentException ae)
         {
             return BadRequest(ae.Message);
         }
-        catch(ApplicationException de)
+        catch (ApplicationException de)
         {
             return Conflict(de.Message);
         }
@@ -46,7 +56,6 @@ public class ProductsController : ControllerBase
         {
             return Problem("Se produjo un error al guardar");
         }
-        
     }
 
 }

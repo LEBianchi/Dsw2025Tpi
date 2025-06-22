@@ -54,7 +54,7 @@ namespace Dsw2025Tpi.Application.Services
         }
         public async Task<ProductModel.Response?> GetProductById(Guid id)
         {
-            var product = await _repository.GetById<Product>(id, nameof(Product));
+            var product = await _repository.GetById<Product>(id);
             return product != null ?
                 new ProductModel.Response(
                 product.Id,
@@ -66,7 +66,22 @@ namespace Dsw2025Tpi.Application.Services
                 product.IsActive) : null;
                 
         }
+
+        public async Task<IEnumerable<ProductModel.Response>?> GetProducts()
+        {
+            
+            return (await _repository
+                .GetFiltered<Product>(p => p.IsActive))?
+                .Select(p => new ProductModel.Response(
+                p.Id,
+                p.Sku,
+                p.Name,
+                p.Description,
+                p.CurrentUnitPrice,
+                p.StockQuantity,
+                p.IsActive));
+        }
     }
 
-        
+
 }
