@@ -52,6 +52,20 @@ namespace Dsw2025Tpi.Application.Services
                 product.StockQuantity,
                 product.IsActive);
         }
+        public async Task<ProductModel.Response?> GetProductById(Guid id)
+        {
+            var product = await _repository.GetById<Product>(id, nameof(Product));
+            return product != null ?
+                new ProductModel.Response(
+                product.Id,
+                product.Sku,
+                product.Name,
+                product.Description,
+                product.CurrentUnitPrice,
+                product.StockQuantity,
+                product.IsActive) : null;
+                
+        }
     }
 
         
