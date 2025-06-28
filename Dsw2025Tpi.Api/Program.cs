@@ -1,9 +1,11 @@
 using Dsw2025Tpi.Application.Services;
 using Dsw2025Tpi.Data;
+using System.Text.Json.Serialization;
 using Dsw2025Tpi.Data.Repositories;
 using Dsw2025Tpi.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Dsw2025Tpi.Domain.Interfaces;
+using Dsw2025Tpi.Data.Helpers;
 
 namespace Dsw2025Tpi.Api;
 
@@ -27,17 +29,12 @@ public class Program
         
         });
 
-        //Pos si tenemos que cargar datos de prueba desde un json
-        /*
-         *     options.UseSeeding((c, t) =>
-            {
-                ((Dsw2025Ej15Context)c).Seedwork<Category>("Sources\\categories.json");
-                ((Dsw2025Ej15Context)c).Seedwork<Product>("Sources\\products.json");
-            });
-         */
+      
+      
 
         builder.Services.AddScoped<IRepository, EfRepository>();
         builder.Services.AddScoped<ProductsManagementService>();
+        builder.Services.AddScoped<OrdersManagementService>();
 
         var app = builder.Build();
 
@@ -55,6 +52,13 @@ public class Program
         app.MapControllers();
         
         app.MapHealthChecks("/healthcheck");
+        using (var scope = app.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<Dsw2025TpiContext>();
+            context.Database.Migrate(); // Si usás migraciones
+
+            context.Seedwork<Customer>("customers-seed.json");
+        }
 
         app.Run();
     }

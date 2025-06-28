@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Dsw2025Tpi.Data;
 
-public class Dsw2025TpiContext: DbContext
+public class Dsw2025TpiContext : DbContext
 {
     public Dsw2025TpiContext(DbContextOptions<Dsw2025TpiContext> options)
         : base(options)
@@ -24,13 +24,17 @@ public class Dsw2025TpiContext: DbContext
             eb.Property(p => p.Email)
             .HasMaxLength(60)
             .IsRequired();
-            
+
 
             eb.Property(p => p.PhoneNumber)
             .HasMaxLength(17)
             .IsRequired();
-        });
-        
+
+            eb.HasData(
+
+   );
+        }); 
+
         modelBuilder.Entity<Product>(eb =>
         {
             eb.ToTable("Products");
@@ -76,16 +80,16 @@ public class Dsw2025TpiContext: DbContext
 
         modelBuilder.Entity<OrderItem>(eb =>
         {
-           eb.ToTable("OrderItems");
+            eb.ToTable("OrderItems");
 
             eb.Property(p => p.Quantity)
                 .IsRequired();
-    
-                eb.Property(p => p.UnitPrice)
-                .HasPrecision(15, 2)
-                .IsRequired();
-    
-                eb.Ignore(p => p.Subtotal);
+
+            eb.Property(p => p.UnitPrice)
+            .HasPrecision(15, 2)
+            .IsRequired();
+
+            eb.Ignore(p => p.Subtotal);
 
         });
     }

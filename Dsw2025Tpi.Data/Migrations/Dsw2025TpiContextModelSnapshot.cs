@@ -162,9 +162,9 @@ namespace Dsw2025Tpi.Data.Migrations
 
             modelBuilder.Entity("Dsw2025Tpi.Domain.Entities.OrderItem", b =>
                 {
-                    b.HasOne("Dsw2025Tpi.Domain.Entities.Order", "Order")  
-                        .WithMany("OrderItems") 
-                        .HasForeignKey("OrderId");   
+                    b.HasOne("Dsw2025Tpi.Domain.Entities.Order", "Order")
+                        .WithMany("OrderItems")
+                        .HasForeignKey("OrderId");
 
                     b.HasOne("Dsw2025Tpi.Domain.Entities.Product", "Product")
                         .WithMany("OrderItems")

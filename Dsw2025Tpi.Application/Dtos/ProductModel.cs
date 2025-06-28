@@ -26,7 +26,5 @@ namespace Dsw2025Tpi.Application.Dtos
             bool IsActive 
             );
 
-       
-
     }
 }

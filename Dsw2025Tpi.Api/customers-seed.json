@@ -1,0 +1,57 @@
+[
+  {
+    "Id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+    "Name": "Juan Pérez",
+    "Email": "juanperez@example.com",
+    "PhoneNumber": "+54 911 1234 5678"
+  },
+  {
+    "Id": "b2c3d4e5-f6a7-8901-2345-67890abcdef0",
+    "Name": "María López",
+    "Email": "marialopez@example.com",
+    "PhoneNumber": "+54 911 8765 4321"
+  },
+  {
+    "Id": "c3d4e5f6-a7b8-9012-3456-7890abcdef01",
+    "Name": "Carlos García",
+    "Email": "carlos.garcia@example.com",
+    "PhoneNumber": "+54 922 1122 3344"
+  },
+  {
+    "Id": "d4e5f6a7-b8c9-0123-4567-890abcdef012",
+    "Name": "Ana Fernández",
+    "Email": "ana.fernandez@example.com",
+    "PhoneNumber": "+54 934 5566 7788"
+  },
+  {
+    "Id": "e5f6a7b8-c9d0-1234-5678-90abcdef0123",
+    "Name": "Pedro Rodríguez",
+    "Email": "pedro.rodriguez@example.com",
+    "PhoneNumber": "+54 926 9988 7766"
+  },
+  {
+    "Id": "f6a7b8c9-d0e1-2345-6789-0abcdef01234",
+    "Name": "Laura Gómez",
+    "Email": "laura.gomez@example.com",
+    "PhoneNumber": "+54 938 2233 4455"
+  },
+  
+  {
+    "Id": "b8c9d0e1-f2a3-4567-8901-bcdef0123456",
+    "Name": "Sofía Ruiz",
+    "Email": "sofia.ruiz@example.com",
+    "PhoneNumber": "+54 935 1020 3040"
+  },
+  {
+    "Id": "c9d0e1f2-a3b4-5678-9012-cdef01234567",
+    "Name": "Diego Sánchez",
+    "Email": "diego.sanchez@example.com",
+    "PhoneNumber": "+54 922 5060 7080"
+  },
+  {
+    "Id": "d0e1f2a3-b4c5-6789-0123-def012345678",
+    "Name": "Valeria Torres",
+    "Email": "valeria.torres@example.com",
+    "PhoneNumber": "+54 929 9080 7060"
+  }
+]

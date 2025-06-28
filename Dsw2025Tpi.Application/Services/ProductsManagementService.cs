@@ -33,7 +33,7 @@ namespace Dsw2025Tpi.Application.Services
 
             var exist = await _repository.First<Product>(p => p.Sku == request.Sku);
 
-            // if (exist != null) throw new DuplicatedEntityException($"Ya existe un producto con el mismo SKU {request.Sku}");
+            if (exist != null) throw new DuplicatedEntityException($"Ya existe un producto con el mismo SKU {request.Sku}");
 
             var product = new Product(
                 request.Sku,

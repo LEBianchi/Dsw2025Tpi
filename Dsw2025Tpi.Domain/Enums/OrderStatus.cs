@@ -14,4 +14,5 @@ namespace Dsw2025Tpi.Domain.Enums
         DELIVERED,
         CANCELLED
     }
+
 }

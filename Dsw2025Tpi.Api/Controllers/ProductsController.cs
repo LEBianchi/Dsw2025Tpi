@@ -22,7 +22,7 @@ public class ProductsController : ControllerBase
     public async Task<IActionResult> GetProducts()
     {
         var products = await _service.GetProducts();
-        if (products == null || !products.Any()) return NoContent();
+        if (products == null || !products.Any()) return NoContent(); //NotFound("msj") si quisiera un 404
         return Ok(products);
     }
 
