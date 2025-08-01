@@ -51,16 +51,19 @@ namespace Dsw2025Tpi.Application.Services
         public async Task<ProductModel.Response?> GetProductById(Guid id)
         {
             var product = await _repository.GetById<Product>(id);
-            return product != null ?
-                new ProductModel.Response(
+
+            if (product == null)
+                throw new KeyNotFoundException($"No se encontró un producto con el ID: {id}");
+        
+            return new ProductModel.Response(
                 product.Id,
                 product.Sku,
                 product.Name,
                 product.Description,
                 product.CurrentUnitPrice,
                 product.StockQuantity,
-                product.IsActive) : null;
-
+                product.IsActive
+            );
         }
 
         public async Task<IEnumerable<ProductModel.Response>?> GetProducts()

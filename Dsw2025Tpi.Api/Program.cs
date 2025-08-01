@@ -1,3 +1,4 @@
+using Dsw2025Tpi.Api.NewFolder;
 using Dsw2025Tpi.Application.Services;
 using Dsw2025Tpi.Data;
 using Dsw2025Tpi.Data.Helper;
@@ -7,7 +8,6 @@ using Dsw2025Tpi.Domain.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
@@ -216,6 +216,8 @@ public class Program
         }
 
         app.UseHttpsRedirection();
+
+        app.UseMiddleware<ExceptionHandlingMiddleware>();
 
         app.UseAuthorization();
 

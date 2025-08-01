@@ -16,32 +16,36 @@ public class OrdersManagementService
         _repository = repository;
     }
 
-    public async Task<OrderResponse?> GetOrderById(Guid id)
+  
+
+    public async Task<OrderResponse> GetOrderById(Guid id)
     {
         var order = await _repository.GetById<Order>(id, "OrderItems.Product");
-           
+
+        
         if (order == null)
         {
-            return null;
+            throw new OrderNotFoundException(id);
         }
+
         var orderItemResponses = order.OrderItems.Select(oi => new OrderItemResponse(
-            oi.ProductId ?? Guid.Empty, 
-            oi.Product?.Name, //se podria poner ??"(sin nombre)" si es null
+            oi.ProductId ?? Guid.Empty,
+            oi.Product?.Name,
             oi.Quantity,
             oi.UnitPrice,
             oi.Subtotal
         )).ToList();
 
         return new OrderResponse(
-           order.Id,
-           order.Date,
-           order.ShippingAddress,
-           order.BillingAddress,
-           order.Notes,
-           order.TotalAmount,
-           order.Status,
-           orderItemResponses
-       );
+            order.Id,
+            order.Date,
+            order.ShippingAddress,
+            order.BillingAddress,
+            order.Notes,
+            order.TotalAmount,
+            order.Status,
+            orderItemResponses
+        );
     }
     public async Task<IEnumerable<OrderResponse>> GetOrders(
        OrderStatus? status,
