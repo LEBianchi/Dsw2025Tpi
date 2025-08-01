@@ -23,7 +23,7 @@ namespace Dsw2025Tpi.Domain.Entities
 
         public Product(string sku, string name, decimal price, int stock, string? description = null)
         {
-            Sku = sku;
+            Sku = sku.Trim();
             Name = name;
             CurrentUnitPrice = price;
             StockQuantity = stock;

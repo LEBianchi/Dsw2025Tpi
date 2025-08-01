@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Dsw2025Tpi.Domain.Enums;
-using Dsw2025Tpi.Application.Dtos;
+﻿using Dsw2025Tpi.Domain.Enums;
 namespace Dsw2025Tpi.Application.Dtos;
 
 public record OrderRequest(

@@ -1,12 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Dsw2025Tpi.Application.Services;
 using Dsw2025Tpi.Application.Dtos;
-using Microsoft.AspNetCore.Mvc.Diagnostics;
+using Microsoft.AspNetCore.Authorization;
+using Dsw2025Tpi.Application.Exceptions;
 
 namespace Dsw2025Tpi.Api.Controllers;
 
 
 [ApiController]
+[Authorize]
 [Route("/api/products")]
 
 public class ProductsController : ControllerBase
@@ -18,14 +20,18 @@ public class ProductsController : ControllerBase
         _service = service;
     }
 
+    
+    [AllowAnonymous]
     [HttpGet()]
     public async Task<IActionResult> GetProducts()
     {
         var products = await _service.GetProducts();
-        if (products == null || !products.Any()) return NoContent(); //NotFound("msj") si quisiera un 404
+        if (products == null || !products.Any())
+            return NoContent();
         return Ok(products);
     }
 
+    [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetProductById(Guid id)
     {
@@ -34,6 +40,8 @@ public class ProductsController : ControllerBase
         return Ok(product);
     }
 
+    
+    [Authorize(Roles = "Admin")]
     [HttpPost()]
     public async Task<IActionResult> AddProduct([FromBody] ProductModel.Request request)
     {
@@ -44,20 +52,22 @@ public class ProductsController : ControllerBase
             // Retorna 201 Created + la ubicación del nuevo recurso
             return CreatedAtAction(nameof(GetProductById), new { id = product.Id }, product);
         }
-        catch (ArgumentException ae)
+        catch (InvalidDataException ex)
         {
-            return BadRequest(ae.Message);
+            return BadRequest(ex.Message);
         }
-        catch (ApplicationException de)
+        catch (DuplicatedEntityException ex)
         {
-            return Conflict(de.Message);
+            return BadRequest(ex.Message);
         }
         catch (Exception)
         {
-            return Problem("Se produjo un error al guardar");
+            return BadRequest("Se produjo un error al guardar");
         }
+
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateProduct(Guid id, [FromBody] ProductModel.Request request)
     {
@@ -66,23 +76,26 @@ public class ProductsController : ControllerBase
             var updated = await _service.UpdateProduct(id, request);
             return Ok(updated);
         }
-        catch (ArgumentException ae)
+        catch (InvalidDataException ex)
         {
-            return BadRequest(ae.Message);
+            return BadRequest(ex.Message);
         }
-        catch (KeyNotFoundException knf)
+        // CAMBIO: Captura DuplicatedEntityException
+        catch (DuplicatedEntityException ex)
         {
-            return NotFound(knf.Message); 
+            return BadRequest(ex.Message);
         }
-        catch (ApplicationException de)        
+        catch (KeyNotFoundException ex)
         {
-            return Conflict(de.Message);
+            return NotFound(ex.Message);
         }
         catch (Exception)
         {
             return Problem("Se produjo un error al actualizar");
         }
     }
+
+    [Authorize(Roles = "Admin")]
     [HttpPatch("{id}")]
     public async Task<IActionResult> DisableProduct(Guid id)
     {
@@ -103,3 +116,4 @@ public class ProductsController : ControllerBase
     }
 
 }
+

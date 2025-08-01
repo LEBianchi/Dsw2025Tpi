@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Dsw2025Tpi.Application.Dtos;
-using Dsw2025Tpi.Domain;
+﻿using Dsw2025Tpi.Application.Dtos;
 using Dsw2025Tpi.Domain.Interfaces;
 using Dsw2025Tpi.Domain.Entities;
 using Dsw2025Tpi.Application.Exceptions;
@@ -24,14 +18,16 @@ namespace Dsw2025Tpi.Application.Services
 
         public async Task<ProductModel.Response> AddProduct(ProductModel.Request request)
         {
-            if (string.IsNullOrWhiteSpace(request.Sku) ||
-               string.IsNullOrWhiteSpace(request.Name) ||
-               request.CurrectUnitPrice < 0 || request.StockQuantity < 0)
-            {
-                throw new ArgumentException("Los valores del producto son invalidos.");
-            }
+            if (string.IsNullOrWhiteSpace(request.Sku)  || string.IsNullOrWhiteSpace(request.Name))
+                throw new InvalidDataException("El sku y el nombre son requerido");
 
-            var exist = await _repository.First<Product>(p => p.Sku == request.Sku);
+            if (request.CurrectUnitPrice < 0)
+                throw new InvalidDataException("El precio unitario ser mayores a cero");
+
+            if (request.StockQuantity <= 0)
+                throw new InvalidDataException("La cantidad de stock debe ser mayor o igual a cero");
+
+            var exist = await _repository.First<Product>(p => p.Sku.Trim() == request.Sku.Trim());
 
             if (exist != null) throw new DuplicatedEntityException($"Ya existe un producto con el mismo SKU {request.Sku}");
 
@@ -85,24 +81,24 @@ namespace Dsw2025Tpi.Application.Services
 
     public async Task<ProductModel.Response> UpdateProduct(Guid id, ProductModel.Request request)
         {
-            if (string.IsNullOrWhiteSpace(request.Sku) ||
-                string.IsNullOrWhiteSpace(request.Name) ||
-                request.CurrectUnitPrice <= 0 ||
-                request.StockQuantity < 0)
-            {
-                throw new ArgumentException("Datos de producto inválidos.");
-            }
-
             var existing = await _repository.GetById<Product>(id);
-            if (existing == null)
+            if (existing == null || !existing.IsActive)
                 throw new KeyNotFoundException($"No se encontró producto con Id={id}.");
 
-            
+            if (string.IsNullOrWhiteSpace(request.Sku) || string.IsNullOrWhiteSpace(request.Name))
+                throw new InvalidDataException("El sku y el nombre son requerido");
+
+            if (request.CurrectUnitPrice < 0)
+                throw new InvalidDataException("El precio unitario ser mayores a cero");
+
+            if (request.StockQuantity <= 0)
+                throw new InvalidDataException("La cantidad de stock debe ser mayor o igual a cero");
+
             var mismoSku = await _repository.First<Product>(
                 p => p.Sku == request.Sku && p.Id != id 
             );
             if (mismoSku != null)
-                throw new ApplicationException($"Ya existe otro producto con SKU='{request.Sku}'.");
+                throw new DuplicatedEntityException($"Ya existe otro producto con SKU='{request.Sku}'.");
 
             
             existing.Sku = request.Sku;  

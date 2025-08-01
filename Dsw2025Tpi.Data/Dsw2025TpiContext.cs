@@ -29,11 +29,9 @@ public class Dsw2025TpiContext : DbContext
             eb.Property(p => p.PhoneNumber)
             .HasMaxLength(17)
             .IsRequired();
+        });
 
-            eb.HasData(
 
-   );
-        }); 
 
         modelBuilder.Entity<Product>(eb =>
         {
