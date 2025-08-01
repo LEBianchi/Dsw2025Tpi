@@ -11,8 +11,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
-using System.Text.Json;
+using System.Text.Json; 
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 
 namespace Dsw2025Tpi.Api;
 
@@ -24,6 +25,17 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
 
         // Add services to the container.
+        builder.Services.AddLogging(config =>
+        {
+            config.ClearProviders(); //para limpiar prov por defecto
+            config.AddConsole();
+
+            var path = builder.Configuration.GetValue<string>("LogPath");
+            if (!string.IsNullOrEmpty(path))
+            {
+                config.AddFile(path); 
+            }
+        });
 
         builder.Services.AddControllers().AddJsonOptions(opt=>
         {

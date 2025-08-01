@@ -3,21 +3,24 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-
+using Microsoft.Extensions.Logging;
 
 namespace Dsw2025Tpi.Application.Services
 {
     public class JwtTokenService
     {
         private readonly IConfiguration _config;
-
-        public JwtTokenService(IConfiguration config)
+        private readonly ILogger<JwtTokenService> _logger;
+        public JwtTokenService(IConfiguration config, ILogger<JwtTokenService> logger)
         {
             _config = config;
+            _logger = logger;
         }
 
         public string GenerateToken(string username, string role)
         {
+            _logger.LogInformation("Generando token JWT para el usuario: {Username} con rol: {role}", username, role);
+
             var jwtConfig = _config.GetSection("Jwt");
             var keyText = jwtConfig["Key"] ?? throw new ArgumentNullException("Jwt Key");
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyText));
@@ -38,6 +41,7 @@ namespace Dsw2025Tpi.Application.Services
                 signingCredentials: creds
                 );
 
+            _logger.LogInformation("Token generado con exito para el usuario: {username}", username);
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
