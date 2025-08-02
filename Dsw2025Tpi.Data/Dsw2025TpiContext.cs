@@ -40,6 +40,10 @@ public class Dsw2025TpiContext : DbContext
             .HasMaxLength(50)
             .IsRequired();
 
+            eb.Property(P => P.InternalCode)
+            .HasMaxLength(50)
+            .IsRequired();
+
             eb.Property(P => P.Name)
             .HasMaxLength(50)
             .IsRequired();

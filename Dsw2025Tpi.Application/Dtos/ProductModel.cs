@@ -6,6 +6,7 @@ namespace Dsw2025Tpi.Application.Dtos
     {
         public record Request(
             string Sku, 
+            string InternalCode,
             string Name,
             string? Descripcion,
             decimal CurrectUnitPrice,
@@ -15,6 +16,7 @@ namespace Dsw2025Tpi.Application.Dtos
         public record Response(
             Guid Id,
             string Sku, 
+            String InternalCode,
             string Name,
             string? Descripcion,
             decimal CurrectUnitPrice,

@@ -49,7 +49,8 @@ namespace Dsw2025Tpi.Application.Services
                 request.Name,
                 request.CurrectUnitPrice,
                 request.StockQuantity,
-                request.Descripcion);
+                request.Descripcion,
+                request.InternalCode);
 
             await _repository.Add(product);
 
@@ -57,6 +58,7 @@ namespace Dsw2025Tpi.Application.Services
             return new ProductModel.Response(
                 product.Id,
                 product.Sku,
+                product.InternalCode,
                 product.Name,
                 product.Description,
                 product.CurrentUnitPrice,
@@ -77,6 +79,7 @@ namespace Dsw2025Tpi.Application.Services
             return new ProductModel.Response(
                 product.Id,
                 product.Sku,
+                product.InternalCode,
                 product.Name,
                 product.Description,
                 product.CurrentUnitPrice,
@@ -94,6 +97,7 @@ namespace Dsw2025Tpi.Application.Services
                 .Select(p => new ProductModel.Response(
                 p.Id,
                 p.Sku,
+                p.InternalCode,
                 p.Name,
                 p.Description,
                 p.CurrentUnitPrice,
@@ -135,7 +139,8 @@ namespace Dsw2025Tpi.Application.Services
                 throw new DuplicatedEntityException($"Ya existe otro producto con SKU='{request.Sku}'.");
             }
             
-            existing.Sku = request.Sku;  
+            existing.Sku = request.Sku; 
+            existing.InternalCode = request.InternalCode;
             existing.Name = request.Name;
             existing.Description = request.Descripcion;
             existing.CurrentUnitPrice = request.CurrectUnitPrice;
@@ -148,6 +153,7 @@ namespace Dsw2025Tpi.Application.Services
             return new ProductModel.Response(
                 updated.Id,
                 updated.Sku, 
+                updated.InternalCode,
                 updated.Name,
                 updated.Description,
                 updated.CurrentUnitPrice,
