@@ -1,0 +1,14 @@
+[
+  {
+    "Id": "c7c6463e-bc3f-4bba-a15a-9e74f7a3cdee",
+    "Name": "Lisandro Bianchi",
+    "Email": "lisandro@example.com",
+    "PhoneNumber": "123456789"
+  },
+  {
+    "Id": "81e0a34b-d59d-4c33-9027-3e1e4f02e41f",
+    "Name": "Laura Gómez",
+    "Email": "laura@example.com",
+    "PhoneNumber": "987654321"
+  }
+]

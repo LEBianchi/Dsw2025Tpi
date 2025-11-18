@@ -1,0 +1,6 @@
+@Dsw2025Tpi.Api_HostAddress = http://localhost:5142
+
+GET {{Dsw2025Tpi.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
