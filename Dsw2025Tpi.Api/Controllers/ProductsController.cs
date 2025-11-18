@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Dsw2025Tpi.Application.Dtos;
 using Dsw2025Tpi.Application.Services;
-using Dsw2025Tpi.Application.Dtos;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 
 namespace Dsw2025Tpi.Api.Controllers;
@@ -14,26 +14,47 @@ namespace Dsw2025Tpi.Api.Controllers;
 public class ProductsController : ControllerBase
 {
     private readonly ProductsManagementService _service;
-    private readonly ILogger<ProductsController> _logger;       
+    private readonly ILogger<ProductsController> _logger;
     public ProductsController(ProductsManagementService service, ILogger<ProductsController> logger)
     {
         _service = service;
         _logger = logger;
     }
 
-    
+
     [AllowAnonymous]
     [HttpGet()]
-    public async Task<IActionResult> GetProducts()
+    public async Task<IActionResult> GetProducts([FromQuery] ProductModel.FilterProduct filter)
     {
         _logger.LogInformation("Recibida solicitud GET /api/products para obtener todos los productos.");
-        var products = await _service.GetProducts();
-        if (products == null || !products.Any())
+       
+        var result =  await _service.GetProducts(filter);
+
+        if (result.ProductItems == null || !result.ProductItems.Any())
         {
             _logger.LogWarning("No se encontraron productos activos.");
             return NoContent();
         }
-        return Ok(products);
+        return Ok(result);
+    }
+
+
+    [HttpGet("admin")] 
+    [Authorize(Roles = "Admin")] 
+    public async Task<IActionResult> GetAuthProducts([FromQuery] ProductModel.FilterProduct request)
+    {
+        _logger.LogInformation("Admin solicitando productos (incluyendo inactivos).");
+
+        var result = await _service.GetProducts(request, includeInactive: true);
+
+        if (result.ProductItems == null || !result.ProductItems.Any())
+        {
+            
+            Response.Headers.Append("X-Message", "There are no products found");
+            return NoContent();
+        }
+
+        return Ok(result);
     }
 
     [AllowAnonymous]
@@ -45,7 +66,7 @@ public class ProductsController : ControllerBase
         return Ok(product);
     }
 
-    
+
     [Authorize(Roles = "Admin")]
     [HttpPost()]
     public async Task<IActionResult> AddProduct([FromBody] ProductModel.Request request)
