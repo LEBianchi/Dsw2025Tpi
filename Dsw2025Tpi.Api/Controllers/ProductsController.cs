@@ -2,7 +2,7 @@
 using Dsw2025Tpi.Application.Services;
 using Dsw2025Tpi.Application.Dtos;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Logging;
+
 
 namespace Dsw2025Tpi.Api.Controllers;
 
@@ -28,6 +28,11 @@ public class ProductsController : ControllerBase
     {
         _logger.LogInformation("Recibida solicitud GET /api/products para obtener todos los productos.");
         var products = await _service.GetProducts();
+        if (products == null || !products.Any())
+        {
+            _logger.LogWarning("No se encontraron productos activos.");
+            return NoContent();
+        }
         return Ok(products);
     }
 

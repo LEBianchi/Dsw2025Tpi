@@ -111,6 +111,12 @@ public class OrdersManagementService
 
         foreach (var item in request.Items)
         {
+            if (item.Quantity <= 0)
+            {
+                _logger.LogError("Se intentó agregar el producto ID {ProductId} con una cantidad inválida: {Quantity}", item.ProductId, item.Quantity);
+                throw new InvalidOrderDataException($"La cantidad para el producto con ID {item.ProductId} debe ser mayor que cero.");
+            }
+
             var product = await _repository.GetById<Product>(item.ProductId);
 
             if (product == null || !product.IsActive)

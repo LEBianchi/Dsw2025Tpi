@@ -3,7 +3,7 @@ using Dsw2025Tpi.Application.Services;
 using Dsw2025Tpi.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+
 
 namespace Dsw2025Tpi.Api.Controllers;
 
@@ -40,7 +40,7 @@ public class OrdersController : ControllerBase
     {
         _logger.LogInformation("Recibida solicitud GET /api/orders para obtener ordenes.");
         var orders = await _service.GetOrders(status, customerId, pageNumber, pageSize);
-        if (orders == null)
+        if (orders == null || !orders.Any())
         {
             return NoContent();
         }

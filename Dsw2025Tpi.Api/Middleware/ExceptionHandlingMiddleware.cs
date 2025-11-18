@@ -1,4 +1,5 @@
-﻿using Dsw2025Tpi.Application.Exceptions;
+﻿using Dsw2025Tpi.Api.Contract;
+using Dsw2025Tpi.Application.Exceptions;
 using System.Net;
 using System.Text.Json;
 
@@ -36,27 +37,27 @@ namespace Dsw2025Tpi.Api.NewFolder
 
             switch (exception)
             {
-                // Unificamos todas las excepciones que resultan en 400 Bad Request
+                // 400 Bad Request
                 case InvalidOrderDataException or
                      InvalidDataException or
                      InvalidOrderStatusException or
                      DuplicatedEntityException or
                      ArgumentException or
                      InsufficientStockException or
-                     ArgumentNullException: // ArgumentNullException también suele ser un bad request
+                     ArgumentNullException: 
                     status = HttpStatusCode.BadRequest;
                     message = exception.Message;
                     break;
 
-                // Todas las excepciones que resultan en 404 Not Found
+                // 404 Not Found
                 case CustomerNotFoundException or
                      OrderNotFoundException or
                      KeyNotFoundException:
                     status = HttpStatusCode.NotFound;
                     message = exception.Message;
                     break;
-
-                // Caso específico para errores de autenticación/autorización
+                    
+                // errores de autenticación/autorización
                 case UnauthorizedAccessException:
                     status = HttpStatusCode.Forbidden; // 403 Forbidden
                     message = "No tienes permiso para acceder a este recurso.";
@@ -64,14 +65,14 @@ namespace Dsw2025Tpi.Api.NewFolder
 
                
 
-                // Manejador por defecto para cualquier otra excepción
+                // Manejador por defecto 
                 default:
                     status = HttpStatusCode.InternalServerError;
                     message = "Ocurrió un error inesperado en el servidor.";
                     break;
             }
 
-            var result = JsonSerializer.Serialize(new { error = message });
+            var result = JsonSerializer.Serialize(new ApiError("" ,message));
             context.Response.ContentType = "application/json";
             context.Response.StatusCode = (int)status;
             return context.Response.WriteAsync(result);

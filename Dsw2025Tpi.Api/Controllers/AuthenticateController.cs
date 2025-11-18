@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Dsw2025Tpi.Application.Services;
 using Dsw2025Tpi.Application.Dtos;
-using Microsoft.Extensions.Logging;
+
 
 namespace Dsw2025Tpi.Api.Controllers
 {
