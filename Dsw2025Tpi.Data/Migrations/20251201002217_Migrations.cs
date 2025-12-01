@@ -18,7 +18,7 @@ namespace Dsw2025Tpi.Data.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Email = table.Column<string>(type: "nvarchar(60)", maxLength: 60, nullable: false),
                     Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    PhoneNumber = table.Column<string>(type: "nvarchar(17)", maxLength: 17, nullable: false)
+                    PhoneNumber = table.Column<string>(type: "nvarchar(17)", maxLength: 17, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -90,6 +90,12 @@ namespace Dsw2025Tpi.Data.Migrations
                         principalTable: "Products",
                         principalColumn: "Id");
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Customer_Email",
+                table: "Customer",
+                column: "Email",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_OrderItems_OrderId",

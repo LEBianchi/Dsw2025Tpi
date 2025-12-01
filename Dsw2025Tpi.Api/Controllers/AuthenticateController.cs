@@ -2,12 +2,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Dsw2025Tpi.Application.Services;
 using Dsw2025Tpi.Application.Dtos;
-
+using Dsw2025Tpi.Domain.Interfaces;
+using Dsw2025Tpi.Domain.Entities;
 
 namespace Dsw2025Tpi.Api.Controllers
 {
     [ApiController]
-    [Route("/api/authenticate")]
+    [Route("/api/auth")]
     public class AuthenticateController : ControllerBase
     {
         private readonly UserManager<IdentityUser> _userManager;
@@ -15,85 +16,125 @@ namespace Dsw2025Tpi.Api.Controllers
         private readonly JwtTokenService _jwtTokenService;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ILogger<AuthenticateController> _logger;
+        private readonly IRepository _repository;
+
         public AuthenticateController(
             UserManager<IdentityUser> userManager,
             SignInManager<IdentityUser> signInManager,
             JwtTokenService jwtTokenService,
             RoleManager<IdentityRole> roleManager,
-            ILogger<AuthenticateController> logger)
-
+            ILogger<AuthenticateController> logger,
+            IRepository repository)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _jwtTokenService = jwtTokenService;
             _roleManager = roleManager;
             _logger = logger;
+            _repository = repository;
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginModel request)
         {
-            _logger.LogInformation("Recibida solicitud de login para el usuario: {Username}", request.Username);
             var user = await _userManager.FindByNameAsync(request.Username);
-            if (user == null)
-            {
-                _logger.LogWarning("Login fallido. Usuario no encontrado: {Username}", request.Username);
-                return Unauthorized("Usuario o contraseña incorrectos.");
-            }
-            var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
-            if (!result.Succeeded)
-            {
-                _logger.LogWarning("Login fallido. Contraseña incorrecta para el usuario: {Username}", request.Username);
-                return Unauthorized("Usuario o contraseña incorrectos.");
-            }
-            var userRoles = await _userManager.GetRolesAsync(user);
-            var role = userRoles.FirstOrDefault();
+            if (user == null) return Unauthorized("Usuario incorrecto.");
 
-            if (role == null)
+            var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
+            if (!result.Succeeded) return Unauthorized("Contraseña incorrecta.");
+
+            var userRoles = await _userManager.GetRolesAsync(user);
+            // OJO: Asegúrate de que los roles en BD coincidan con mayúsculas/minúsculas
+            var role = userRoles.FirstOrDefault() ?? "USER";
+
+            Guid? customerId = null;
+            string customerName = user.UserName;
+
+            // Comparamos ignorando mayúsculas para evitar errores tontos
+            if (role.ToUpper() == "USER")
             {
-                _logger.LogError("Error critico: El usuario {Username} no tiene un rol asignado.", user.UserName);
-                return StatusCode(500, "Error del sistema: El usuario autenticado no tiene un rol asignado.");
+                var customer = await _repository.First<Customer>(c => c.Email == user.Email);
+
+                if (customer != null)
+                {
+                    customerId = customer.Id;
+                    customerName = customer.Name;
+                }
+                else
+                {
+                    _logger.LogWarning($"El usuario {user.Email} existe en Identity pero no tiene registro en Customers.");
+                }
             }
-            var token = _jwtTokenService.GenerateToken(request.Username, role);
-            _logger.LogInformation("Usuario {Username} autenticado exitosamente.", request.Username);
-            return Ok(new { Token = token, Message = "Secion iniciada con Exito." });
+
+            // Aquí pasamos el ID al token. Si es null, pasamos cadena vacía.
+            var token = _jwtTokenService.GenerateToken(request.Username, role, customerId?.ToString() ?? "");
+
+            return Ok(new
+            {
+                Token = token,
+                UserInfo = new
+                {
+                    Email = user.Email,
+                    IdentityId = user.Id,
+                    CustomerId = customerId,
+                    Name = customerName,
+                    Role = role
+                }
+            });
         }
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterModel model)
         {
-            _logger.LogInformation("Recibida solicitud de registro para el usuario: {Username}", model.Username);
             var user = new IdentityUser { UserName = model.Username, Email = model.Email };
             var result = await _userManager.CreateAsync(user, model.Password);
 
-            if (!result.Succeeded)
-            {
-                _logger.LogWarning("Fallo el registro para el usuario {Username}. Errores: {Errors}", model.Username, string.Join(", ", result.Errors.Select(e => e.Description)));
-                return BadRequest(result.Errors);
-            }
+            if (!result.Succeeded) return BadRequest(result.Errors);
 
-            string userRole = "User";
-            if (!await _roleManager.RoleExistsAsync("User"))
+            string userRole = "USER";
+            if (!await _roleManager.RoleExistsAsync(userRole))
             {
-                _logger.LogInformation("El rol '{Role}' no existe, creándolo...", userRole);
                 await _roleManager.CreateAsync(new IdentityRole(userRole));
             }
+            await _userManager.AddToRoleAsync(user, userRole);
 
-            await _userManager.AddToRoleAsync(user, "User");
-
-            var userRoles = await _userManager.GetRolesAsync(user);
-            var role = userRoles.FirstOrDefault();
-
-            if (role == null)
+            try
             {
-                _logger.LogError("Se produjo un error en el sistema y no se pudo asignar un rol al nuevo usuario");
-                return StatusCode(500, "Error interno: No se pudo asignar el rol 'User' al nuevo usuario.");
+                var newCustomer = new Customer
+                {
+                    Email = model.Email,
+                    Name = model.Username,
+                    // PhoneNumber es opcional ahora, así que no hace falta ponerlo
+                };
+
+                await _repository.Add(newCustomer);
+            }
+            catch (Exception ex)
+            {
+                await _userManager.DeleteAsync(user);
+                _logger.LogError(ex, "Error al crear la entidad Customer. Rollback del usuario realizado.");
+                return StatusCode(500, "Error creando el perfil del cliente.");
             }
 
-            _logger.LogInformation("Usuario {Username} registrado y asignado al rol '{Role}'.", model.Username, userRole);
-            var token = _jwtTokenService.GenerateToken(model.Username, role);
+            // --- CAMBIO IMPORTANTE AQUÍ ---
 
-            return Ok(new { Token = token, Message = "Usuario registrado y sesión iniciada con éxito." });
+            
+            var createdCustomer = await _repository.First<Customer>(c => c.Email == model.Email);
+
+            // 2. Ahora sí generamos el token PASÁNDOLE EL ID (argumento 3)
+            // Esto es crucial para que pueda comprar apenas se registra
+            var token = _jwtTokenService.GenerateToken(
+                model.Username,
+                userRole,
+                createdCustomer?.Id.ToString() ?? ""
+            );
+
+            return Ok(new
+            {
+                Token = token,
+                Message = "Usuario registrado con éxito.",
+                CustomerId = createdCustomer?.Id
+            });
         }
     }
 }

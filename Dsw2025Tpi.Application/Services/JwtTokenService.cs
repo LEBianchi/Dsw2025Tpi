@@ -17,7 +17,7 @@ namespace Dsw2025Tpi.Application.Services
             _logger = logger;
         }
 
-        public string GenerateToken(string username, string role)
+        public string GenerateToken(string username, string role, string customerId)
         {
             _logger.LogInformation("Generando token JWT para el usuario: {Username} con rol: {role}", username, role);
 
@@ -30,7 +30,8 @@ namespace Dsw2025Tpi.Application.Services
             {
             new Claim(JwtRegisteredClaimNames.Sub, username),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new Claim(ClaimTypes.Role, role)
+            new Claim(ClaimTypes.Role, role),
+            new Claim("customerId", customerId)
         };
 
             var token = new JwtSecurityToken(

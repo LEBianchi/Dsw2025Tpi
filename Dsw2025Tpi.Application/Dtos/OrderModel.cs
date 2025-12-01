@@ -1,5 +1,5 @@
-﻿using Dsw2025Tpi.Domain.Enums;
-namespace Dsw2025Tpi.Application.Dtos;
+﻿using Dsw2025Tpi.Application.Dtos;
+using Dsw2025Tpi.Domain.Enums;
 
 public record OrderRequest(
     Guid CustomerId,
@@ -9,6 +9,7 @@ public record OrderRequest(
     List<OrderItemRequest> Items
 );
 
+
 public record OrderResponse(
     Guid OrderId,
     DateTime Date,
@@ -17,6 +18,20 @@ public record OrderResponse(
     string? Notes,
     decimal TotalAmount,
     OrderStatus Status,
-    List<OrderItemResponse> Items
+    List<OrderItemResponse> Items,
+    string? ClientName 
 );
 
+
+public record OrderResponsePagination(
+    List<OrderResponse> Items, 
+    int Total                  
+);
+
+
+public record OrderFilter(
+    string? Search,      
+    string? Status,      
+    int? PageNumber,     
+    int? PageSize        
+);

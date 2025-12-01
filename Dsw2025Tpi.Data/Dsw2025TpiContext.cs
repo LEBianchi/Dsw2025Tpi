@@ -25,10 +25,12 @@ public class Dsw2025TpiContext : DbContext
             .HasMaxLength(60)
             .IsRequired();
 
+            // AGREGAR ESTO: Para asegurar que no haya dos clientes con el mismo mail
+            eb.HasIndex(p => p.Email).IsUnique();
 
             eb.Property(p => p.PhoneNumber)
             .HasMaxLength(17)
-            .IsRequired();
+            .IsRequired(false); // <--- CAMBIO IMPORTANTE: Ahora es opcional
         });
 
 

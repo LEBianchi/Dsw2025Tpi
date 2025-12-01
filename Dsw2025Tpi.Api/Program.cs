@@ -11,12 +11,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
-using System.Text.Json; 
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
-
 namespace Dsw2025Tpi.Api;
-
 
 public class Program
 {
@@ -33,16 +31,17 @@ public class Program
             var path = builder.Configuration.GetValue<string>("LogPath");
             if (!string.IsNullOrEmpty(path))
             {
-                config.AddFile(path); 
+                config.AddFile(path);
             }
         });
 
-        builder.Services.AddControllers().AddJsonOptions(opt=>
+        builder.Services.AddControllers().AddJsonOptions(opt =>
         {
-            opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()); // Esto solo lo agregregamos para que no se muestren los numeros de los enum si no que se muestra la palabra.
-           
-        }    );
-        // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+            opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()); 
+
+        });
+
+        
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(o =>
         {
@@ -72,13 +71,16 @@ public class Program
                     Array.Empty<string>()
                 }
              });
-         });
+        });
+
         builder.Services.AddHealthChecks();
 
         builder.Services.AddDbContext<AuthenticateContext>(options =>
         {
-           options.UseSqlServer(builder.Configuration.GetConnectionString("Dsw2025TpiEntities"));
+            options.UseSqlServer(builder.Configuration.GetConnectionString("Dsw2025TpiEntities"));
         });
+
+        // --- AQUÍ ESTÁ EL CAMBIO ---
         builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
         {
             options.Password = new PasswordOptions
@@ -86,12 +88,17 @@ public class Program
                 RequiredLength = 8
             };
 
+          
         })
-               .AddEntityFrameworkStores<AuthenticateContext>()
-               .AddDefaultTokenProviders();
+        .AddEntityFrameworkStores<AuthenticateContext>()
+        .AddDefaultTokenProviders()
+        .AddErrorDescriber<SpanishIdentityErrorDescriber>(); 
+
+
         var jwtConfig = builder.Configuration.GetSection("Jwt");
         var keyText = jwtConfig["Key"] ?? throw new ArgumentNullException("JWT Key");
         var key = Encoding.UTF8.GetBytes(keyText);
+
         builder.Services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -110,16 +117,12 @@ public class Program
                     IssuerSigningKey = new SymmetricSecurityKey(key)
                 };
             });
-       
 
 
         builder.Services.AddDbContext<Dsw2025TpiContext>(options =>
         {
-            options.UseSqlServer(builder.Configuration.GetConnectionString("Dsw2025TpiEntities")); 
-        
+            options.UseSqlServer(builder.Configuration.GetConnectionString("Dsw2025TpiEntities"));
         });
-
-
 
         builder.Services.AddSingleton<JwtTokenService>();
         builder.Services.AddAuthorization();
@@ -128,8 +131,19 @@ public class Program
         builder.Services.AddScoped<ProductsManagementService>();
         builder.Services.AddScoped<OrdersManagementService>();
 
-        var app = builder.Build();
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowFrontend",
+                policy =>
+                {
+                    policy.WithOrigins("http://localhost:5173") 
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials();
+                });
+        });
 
+        var app = builder.Build();
 
         //para crear los roles y cargar los administradores desde el archivo JSON
         using (var scope = app.Services.CreateScope())
@@ -228,13 +242,15 @@ public class Program
         }
 
         app.UseHttpsRedirection();
+        app.UseCors("AllowFrontend");
 
         app.UseMiddleware<ExceptionHandlingMiddleware>();
 
+        app.UseAuthentication();
         app.UseAuthorization();
 
         app.MapControllers();
-        
+
         app.MapHealthChecks("/healthcheck");
 
         app.Run();

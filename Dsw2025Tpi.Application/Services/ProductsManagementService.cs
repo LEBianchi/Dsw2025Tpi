@@ -90,15 +90,32 @@ namespace Dsw2025Tpi.Application.Services
 
         public async Task<ProductModel.ResponsePagination> GetProducts(ProductModel.FilterProduct filter, bool includeInactive = false)
         {
-            
-            _logger.LogInformation("Consulta de productos con filtros (Incluir Inactivos: {IncludeInactive})", includeInactive);
+            _logger.LogInformation("Consulta de productos. IncludeInactive: {IncludeInactive}, StatusFilter: {Status}", includeInactive, filter.Status);
 
-                        var filteredProducts = await _repository.GetFiltered<Product>(p =>
-                (includeInactive || p.IsActive) 
-                && (string.IsNullOrEmpty(filter.Search)
+            
+            bool? isActiveFilter = null;
+            if (!string.IsNullOrEmpty(filter.Status) && bool.TryParse(filter.Status, out bool parsedStatus))
+            {
+                isActiveFilter = parsedStatus;
+            }
+
+            var filteredProducts = await _repository.GetFiltered<Product>(p =>
+                
+                (includeInactive || p.IsActive)
+
+                &&
+
+                
+                (!isActiveFilter.HasValue || p.IsActive == isActiveFilter.Value)
+
+                &&
+
+                
+                (string.IsNullOrEmpty(filter.Search)
                     || (p.Name != null && p.Name.Contains(filter.Search))
                     || (p.InternalCode != null && p.InternalCode.Contains(filter.Search))
-                   )
+                    || (p.Sku != null && p.Sku.Contains(filter.Search))
+                )
             );
 
             if (filteredProducts == null || !filteredProducts.Any())
@@ -114,18 +131,12 @@ namespace Dsw2025Tpi.Application.Services
                 .Skip((page - 1) * size)
                 .Take(size)
                 .Select(p => new ProductModel.ResponseProduct(
-                    p.Id,
-                    p.Sku,
-                    p.InternalCode,
-                    p.Name,
-                    p.Description,
-                    p.CurrentUnitPrice,
-                    p.StockQuantity,
-                    p.IsActive
+                    p.Id, p.Sku, p.InternalCode, p.Name, p.Description,
+                    p.CurrentUnitPrice, p.StockQuantity, p.IsActive
                 ))
                 .ToList();
 
-                        return new ProductModel.ResponsePagination(products, filteredProducts.Count());
+            return new ProductModel.ResponsePagination(products, filteredProducts.Count());
         }
         public async Task<ProductModel.ResponseProduct> UpdateProduct(Guid id, ProductModel.Request request)
         {

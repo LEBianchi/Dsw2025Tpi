@@ -11,33 +11,93 @@ public class OrdersManagementService
 {
     private readonly IRepository _repository;
     private readonly ILogger<OrdersManagementService> _logger;
+
     public OrdersManagementService(IRepository repository, ILogger<OrdersManagementService> logger)
     {
         _repository = repository;
         _logger = logger;
     }
 
-
-
-    public async Task<OrderResponse> GetOrderById(Guid id)
+    // --- GET ORDERS (CORREGIDO PARA PAGINACIÓN) ---
+    public async Task<OrderResponsePagination> GetOrders(OrderFilter filter)
     {
-        _logger.LogInformation("Buscando orde con ID: {OrderID}", id);
-        var order = await _repository.GetById<Order>(id, "OrderItems.Product");
+        _logger.LogInformation("Obteniendo órdenes con filtros: {@Filter}", filter);
 
-        
-        if (order == null)
+        // NOTA: Si tu repositorio no trae los items automáticamente, acá deberías usar un método 
+        // que haga .Include(o => o.OrderItems).ThenInclude(i => i.Product)
+        var query = await _repository.GetFiltered<Order>(
+            o => true,                  // Condición (Traer todo)
+            "Customer",                 // <--- IMPORTANTE: Para que aparezca el nombre del cliente
+            "OrderItems",               // <--- IMPORTANTE: Para que la lista de items no esté vacía
+            "OrderItems.Product"        // <--- IMPORTANTE: Para saber el nombre del producto dentro del item
+        );
+
+        // 1. Filtros
+        if (!string.IsNullOrWhiteSpace(filter.Search))
         {
-            _logger.LogWarning("Orden con ID: {OrderId} no encontrada.", id);
-            throw new OrderNotFoundException(id);
+            string term = filter.Search.ToLower();
+            query = query.Where(o =>
+                (o.Customer != null && (o.Customer.Name.ToLower().Contains(term) || o.Customer.Email.ToLower().Contains(term)))
+            );
         }
 
-        var orderItemResponses = order.OrderItems.Select(oi => new OrderItemResponse(
+        if (!string.IsNullOrWhiteSpace(filter.Status) && !filter.Status.Equals("Todos", StringComparison.OrdinalIgnoreCase))
+        {
+            if (Enum.TryParse<OrderStatus>(filter.Status, true, out var statusEnum))
+            {
+                query = query.Where(o => o.Status == statusEnum);
+            }
+        }
+
+        // 2. Total y Paginación
+        int totalItems = query.Count();
+        int page = filter.PageNumber ?? 1;
+        int size = filter.PageSize ?? 10;
+
+        var pagedItems = query
+            .OrderByDescending(o => o.Date)
+            .Skip((page - 1) * size)
+            .Take(size)
+            .Select(o => new OrderResponse(
+                o.Id,
+                o.Date,
+                o.ShippingAddress,
+                o.BillingAddress,
+                o.Notes,
+                o.TotalAmount,
+                o.Status,
+                // PROTECCIÓN CONTRA NULOS AQUÍ:
+                (o.OrderItems != null)
+                    ? o.OrderItems.Select(i => new OrderItemResponse(
+                        i.ProductId ?? Guid.Empty,
+                        i.Product != null ? i.Product.Name : "(Producto)",
+                        i.Quantity,
+                        i.UnitPrice,
+                        i.Subtotal
+                      )).ToList()
+                    : new List<OrderItemResponse>(),
+                o.Customer != null ? o.Customer.Name : "Cliente Desconocido"
+            ))
+            .ToList();
+
+        return new OrderResponsePagination(pagedItems, totalItems);
+    }
+
+    // --- GET BY ID ---
+    public async Task<OrderResponse> GetOrderById(Guid id)
+    {
+        _logger.LogInformation("Buscando orden con ID: {OrderID}", id);
+        var order = await _repository.GetById<Order>(id, "OrderItems.Product", "Customer");
+
+        if (order == null) throw new OrderNotFoundException(id);
+
+        var orderItemResponses = order.OrderItems?.Select(oi => new OrderItemResponse(
             oi.ProductId ?? Guid.Empty,
-            oi.Product?.Name,
+            oi.Product?.Name ?? "(Producto eliminado)",
             oi.Quantity,
             oi.UnitPrice,
             oi.Subtotal
-        )).ToList();
+        )).ToList() ?? new List<OrderItemResponse>();
 
         return new OrderResponse(
             order.Id,
@@ -47,100 +107,38 @@ public class OrdersManagementService
             order.Notes,
             order.TotalAmount,
             order.Status,
-            orderItemResponses
+            orderItemResponses,
+            order.Customer?.Name ?? "Cliente Desconocido"
         );
     }
-    public async Task<IEnumerable<OrderResponse>> GetOrders(
-       OrderStatus? status,
-       Guid? customerId,
-       int pageNumber,
-       int pageSize)
-    {
-        _logger.LogInformation("Buscando ordenes con filtros: Status={Status}, CustomerId={CustomerId}, Page={Page}, Size={PageSize}", status, customerId, pageNumber, pageSize);
-        var query = await _repository.GetAll<Order>("OrderItems.Product");
 
-        if (status.HasValue)
-            query = query.Where(o => o.Status == status.Value);
-
-        if (customerId.HasValue)
-            query = query.Where(o => o.CustomerId == customerId.Value);
-
-        var paginated = query
-            .Skip((pageNumber - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
-
-        return paginated.Select(order => new OrderResponse(
-          order.Id,
-          order.Date,
-          order.ShippingAddress,
-          order.BillingAddress,
-          order.Notes,
-          order.TotalAmount,
-          order.Status,
-            order.OrderItems.Select(oi => new OrderItemResponse(
-                oi.ProductId ?? Guid.Empty,
-                oi.Product?.Name ?? string.Empty,
-                oi.Quantity,
-                oi.UnitPrice,
-                oi.Subtotal)).ToList()
-        ));
-    }
-
+    // --- CREATE ORDER ---
     public async Task<OrderResponse> CreateOrder(OrderRequest request)
     {
-        _logger.LogInformation("Iniciando proceso para crear una nueva orden para el cliente ID: {CustomerId}", request.CustomerId);
+        _logger.LogInformation("Creando orden para cliente ID: {CustomerId}", request.CustomerId);
 
-        if (string.IsNullOrWhiteSpace(request.ShippingAddress) ||
-            string.IsNullOrWhiteSpace(request.BillingAddress) ||
-            request.Items == null || !request.Items.Any())
-        {
-
-            throw new InvalidOrderDataException("Datos incompletos para la orden.");
-        }
+        if (request.Items == null || !request.Items.Any())
+            throw new InvalidOrderDataException("La orden debe tener al menos un ítem.");
 
         var customer = await _repository.GetById<Customer>(request.CustomerId);
-        if (customer == null)
-        {
-            _logger.LogWarning("Cliente con ID {CustomerId} no encontrado al intentar crear una orden.", request.CustomerId);
-            throw new CustomerNotFoundException(request.CustomerId);
-        }
+        if (customer == null) throw new CustomerNotFoundException(request.CustomerId);
 
         var orderItems = new List<OrderItem>();
         decimal total = 0m;
 
         foreach (var item in request.Items)
         {
-            if (item.Quantity <= 0)
-            {
-                _logger.LogError("Se intentó agregar el producto ID {ProductId} con una cantidad inválida: {Quantity}", item.ProductId, item.Quantity);
-                throw new InvalidOrderDataException($"La cantidad para el producto con ID {item.ProductId} debe ser mayor que cero.");
-            }
+            if (item.Quantity <= 0) throw new InvalidOrderDataException($"Cantidad inválida para producto {item.ProductId}");
 
             var product = await _repository.GetById<Product>(item.ProductId);
+            if (product == null || !product.IsActive) throw new ArgumentException($"Producto {item.ProductId} no disponible.");
+            if (product.StockQuantity < item.Quantity) throw new InsufficientStockException(product.Name, product.StockQuantity, item.Quantity);
 
-            if (product == null || !product.IsActive)
-            {
-                _logger.LogError("Producto con ID {ProductId} no encontrado o inactivo al crear orden.", item.ProductId);
-                throw new ArgumentException($"Producto con Id={item.ProductId} no encontrado o inactivo.");
-            }
-
-            if (product.StockQuantity < item.Quantity)
-            {
-                _logger.LogError("Stock insuficiente para el producto ID {ProductId}. Solicitado: {Quantity}, Disponible: {Stock}", item.ProductId, item.Quantity, product.StockQuantity);
-                throw new InsufficientStockException(product.Name, product.StockQuantity,item.Quantity);
-            }
-
-            _logger.LogInformation("Actualizando stock para producto ID {ProductId}. Stock anterior: {OldStock}, Nuevo stock: {NewStock}", product.Id, product.StockQuantity, product.StockQuantity - item.Quantity);
             product.StockQuantity -= item.Quantity;
             await _repository.Update(product);
 
-            var orderItem = new OrderItem
-            {
-                ProductId = product.Id,
-                Quantity = item.Quantity,
-                UnitPrice = product.CurrentUnitPrice
-            };
+            var orderItem = new OrderItem(Guid.Empty, product.Id, item.Quantity, product.CurrentUnitPrice);
+            orderItem.Product = product; // Asignamos para tener el nombre en la respuesta inmediata
 
             orderItems.Add(orderItem);
             total += orderItem.Subtotal;
@@ -153,15 +151,6 @@ public class OrdersManagementService
         };
 
         await _repository.Add(order);
-        _logger.LogInformation("Orden con ID {OrderId} creada exitosamente.", order.Id);
-
-        var orderItemResponses = orderItems.Select(oi => new OrderItemResponse(
-            oi.ProductId ?? Guid.Empty,
-            oi.Product?.Name ?? "(sin nombre)",
-            oi.Quantity,
-            oi.UnitPrice,
-            oi.Subtotal
-        )).ToList();
 
         return new OrderResponse(
             order.Id,
@@ -171,48 +160,45 @@ public class OrdersManagementService
             order.Notes,
             order.TotalAmount,
             order.Status,
-            orderItemResponses
-        );
-    }
-    public async Task<OrderResponse> UpdateOrderStatus(Guid orderId, string newStatus)
-    {
-        _logger.LogInformation("Intentando actualizar estado de la orden ID: {OrderId} a '{NewStatus}'", orderId, newStatus);
-        var order = await _repository.GetById<Order>(orderId, nameof(Order.OrderItems), $"{nameof(Order.OrderItems)}.{nameof(OrderItem.Product)}");
-
-        if (order == null)
-        {
-            _logger.LogWarning("Intento de actualizar estado de una orden no encontrada. ID: {OrderId}", orderId);
-            throw new OrderNotFoundException(orderId);
-        }
-
-        if (newStatus.Any(char.IsDigit))
-        {
-            _logger.LogError("Intento Actualizar orden ID {OrderId} con un numero lo cual no es valido: {InvalidStatus}", orderId, newStatus);
-            throw new InvalidOrderStatusException($"El estado '{newStatus}' no puede contener números. Por favor, use uno de los siguientes: {string.Join(", ", Enum.GetNames(typeof(OrderStatus)))}");
-        }
-        if (!Enum.TryParse(newStatus, true, out OrderStatus parsedStatus) || !Enum.IsDefined(typeof(OrderStatus), parsedStatus))
-        {
-            _logger.LogError("Intento de actualizar orden ID {OrderId} con un estado inválido: '{InvalidStatus}'", orderId, newStatus);
-            throw new InvalidOrderStatusException($"El estado '{newStatus}' no es un valor válido. Los valores permitidos son: {string.Join(", ", Enum.GetNames(typeof(OrderStatus)))}");
-        }
-        order.Status = parsedStatus;
-
-        var updatedOrder = await _repository.Update(order);
-        _logger.LogInformation("Estado de la orden ID {OrderId} actualizado a '{NewStatus}'", orderId, newStatus);
-        return new OrderResponse(
-            updatedOrder.Id,
-            updatedOrder.Date,
-            updatedOrder.ShippingAddress,
-            updatedOrder.BillingAddress,
-            updatedOrder.Notes,
-            updatedOrder.TotalAmount,
-            updatedOrder.Status,
-            updatedOrder.OrderItems.Select(oi => new OrderItemResponse(
+            orderItems.Select(oi => new OrderItemResponse(
                 oi.ProductId ?? Guid.Empty,
-                oi.Product?.Name ?? "(sin nombre)",
+                oi.Product?.Name ?? "(Producto)",
                 oi.Quantity,
                 oi.UnitPrice,
-                oi.Subtotal)).ToList()
+                oi.Subtotal
+            )).ToList(),
+            customer.Name
+        );
+    }
+
+    // --- UPDATE STATUS ---
+    public async Task<OrderResponse> UpdateOrderStatus(Guid orderId, string newStatus)
+    {
+        var order = await _repository.GetById<Order>(orderId, "OrderItems.Product", "Customer");
+        if (order == null) throw new OrderNotFoundException(orderId);
+
+        if (!Enum.TryParse<OrderStatus>(newStatus, true, out var parsedStatus))
+            throw new InvalidOrderStatusException($"Estado '{newStatus}' no válido.");
+
+        order.Status = parsedStatus;
+        await _repository.Update(order);
+
+        return new OrderResponse(
+            order.Id,
+            order.Date,
+            order.ShippingAddress,
+            order.BillingAddress,
+            order.Notes,
+            order.TotalAmount,
+            order.Status,
+            order.OrderItems?.Select(oi => new OrderItemResponse(
+                oi.ProductId ?? Guid.Empty,
+                oi.Product?.Name ?? "(Producto)",
+                oi.Quantity,
+                oi.UnitPrice,
+                oi.Subtotal
+            )).ToList() ?? new List<OrderItemResponse>(),
+            order.Customer?.Name ?? "Cliente Desconocido"
         );
     }
 }

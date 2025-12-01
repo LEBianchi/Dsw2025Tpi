@@ -1,9 +1,7 @@
 ﻿using Dsw2025Tpi.Application.Dtos;
 using Dsw2025Tpi.Application.Services;
-using Dsw2025Tpi.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-
 
 namespace Dsw2025Tpi.Api.Controllers;
 
@@ -14,40 +12,32 @@ public class OrdersController : ControllerBase
 {
     private readonly OrdersManagementService _service;
     private readonly ILogger<OrdersController> _logger;
+
     public OrdersController(OrdersManagementService service, ILogger<OrdersController> logger)
     {
         _service = service;
         _logger = logger;
     }
 
-    
     [HttpPost]
     public async Task<IActionResult> CreateOrder([FromBody] OrderRequest request)
     {
         _logger.LogInformation("Recibida solicitud POST /api/orders para crear una nueva orden.");
         var created = await _service.CreateOrder(request);
         return CreatedAtAction(nameof(GetOrderById), new { id = created.OrderId }, created);
-
     }
 
-
-    [HttpGet]
-    public async Task<IActionResult> GetOrders(
-           [FromQuery] OrderStatus? status,
-           [FromQuery] Guid? customerId,
-           [FromQuery] int pageNumber = 1,
-           [FromQuery] int pageSize = 10)
+        [HttpGet]
+    public async Task<IActionResult> GetOrders([FromQuery] OrderFilter filter)
     {
-        _logger.LogInformation("Recibida solicitud GET /api/orders para obtener ordenes.");
-        var orders = await _service.GetOrders(status, customerId, pageNumber, pageSize);
-        if (orders == null || !orders.Any())
-        {
-            return NoContent();
-        }
-        return Ok(orders);
+        _logger.LogInformation("Recibida solicitud GET /api/orders con filtros.");
+
+        var result = await _service.GetOrders(filter);
+
+        // Devolvemos Ok con el resultado (aunque esté vacío, devuelve objeto con total 0)
+        return Ok(result);
     }
 
-    
     [HttpGet("{id}")]
     public async Task<IActionResult> GetOrderById(Guid id)
     {
@@ -57,12 +47,11 @@ public class OrdersController : ControllerBase
     }
 
     [Authorize(Roles = "Admin")]
-    [HttpPut("{id}/status")] 
-    public async Task<IActionResult> UpdateOrderStatus(Guid id, [FromBody] UpdateStatus request)
+    [HttpPut("{id}/status")]
+    public async Task<IActionResult> UpdateOrderStatus(Guid id, [FromBody] string newStatus) // Ojo: simplifiqué a string, o usá tu DTO UpdateStatus
     {
         _logger.LogInformation("Recibida solicitud PUT /api/orders/{OrderId}/status", id);
-        var updated = await _service.UpdateOrderStatus(id, request.NewStatus);
+        var updated = await _service.UpdateOrderStatus(id, newStatus);
         return Ok(updated);
     }
-
 }
