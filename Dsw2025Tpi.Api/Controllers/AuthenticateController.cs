@@ -86,6 +86,12 @@ namespace Dsw2025Tpi.Api.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterModel model)
         {
+            var existingCustomer = await _repository.First<Customer>(c => c.Email == model.Email);
+            if (existingCustomer != null)
+            {
+                return Conflict("El email ya está registrado en el sistema.");
+            }
+
             var user = new IdentityUser { UserName = model.Username, Email = model.Email };
             var result = await _userManager.CreateAsync(user, model.Password);
 
